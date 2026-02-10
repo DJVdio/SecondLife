@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { ensureFreshToken } from "@/lib/auth/ensure-token";
 import { buildChatStreamRequest } from "@/lib/secondme/client";
 import { stageMessages } from "@/lib/game/prompts";
-import type { LifeStage } from "@/lib/game/types";
+import type { LifeStage, Attributes } from "@/lib/game/types";
 
-const stageMessageMap: Record<string, (choice: string) => string> = {
+const stageMessageMap: Record<string, (choice: string, attrs: Attributes) => string> = {
   youth: stageMessages.youth,
   adulthood: stageMessages.adulthood,
   middle_age: stageMessages.middle_age,
@@ -14,10 +14,11 @@ const stageMessageMap: Record<string, (choice: string) => string> = {
 export async function POST(request: NextRequest) {
   try {
     const token = await ensureFreshToken();
-    const { choiceText, nextStage, sessionId } = (await request.json()) as {
+    const { choiceText, nextStage, sessionId, attributes } = (await request.json()) as {
       choiceText: string;
       nextStage: LifeStage;
       sessionId: string;
+      attributes: Attributes;
     };
 
     if (!choiceText || !nextStage || !sessionId) {
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const message = buildMessage(choiceText);
+    const message = buildMessage(choiceText, attributes);
     const { url, init } = buildChatStreamRequest(token, message, {
       sessionId,
     });

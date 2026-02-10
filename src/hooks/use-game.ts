@@ -162,6 +162,7 @@ export function useGame() {
             choiceText,
             nextStage,
             sessionId: data.sessionId,
+            attributes: data.attributes,
           }),
         });
 

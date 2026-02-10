@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { useGame } from "@/hooks/use-game";
 import { StatsBar } from "@/components/ui/stats-bar";
 import { Typewriter } from "@/components/ui/typewriter";
@@ -44,6 +44,30 @@ export function GameController() {
     }
   };
 
+  // 从原始 JSON 流中提取可读叙事文本
+  const narrativeText = useMemo(() => {
+    if (!streamContent) return "";
+    const parts: string[] = [];
+
+    // 提取完整的 "text"/"stage_summary"/"final_summary" 字段值
+    const regex = /"(?:text|stage_summary|final_summary|epitaph)"\s*:\s*"((?:[^"\\]|\\.)*)"/g;
+    let match;
+    let lastEnd = 0;
+    while ((match = regex.exec(streamContent)) !== null) {
+      parts.push(match[1].replace(/\\"/g, '"').replace(/\\n/g, "\n"));
+      lastEnd = regex.lastIndex;
+    }
+
+    // 捕获正在流式输出中的部分文本（引号还没闭合）
+    const tail = streamContent.slice(lastEnd);
+    const partial = tail.match(/"(?:text|stage_summary|final_summary|epitaph)"\s*:\s*"((?:[^"\\]|\\.)*?)$/);
+    if (partial) {
+      parts.push(partial[1].replace(/\\"/g, '"').replace(/\\n/g, "\n"));
+    }
+
+    return parts.join("\n\n");
+  }, [streamContent]);
+
   const currentStage = stageResults[stageResults.length - 1];
   const showChoices =
     !isStreaming && currentStage?.choices?.length > 0 && !isComplete;
@@ -75,7 +99,7 @@ export function GameController() {
       )}
 
       {/* 加载中 */}
-      {isStreaming && stageResults.length === 0 && !streamContent && (
+      {isStreaming && stageResults.length === 0 && !narrativeText && (
         <div className="flex flex-col items-center py-16 animate-fade-in">
           <div className="w-8 h-8 border-2 border-foreground border-t-transparent rounded-full animate-spin mb-4" />
           <p className="text-sm text-muted">正在翻阅你的记忆，编织新的人生...</p>
@@ -93,9 +117,9 @@ export function GameController() {
       {stageResults.length > 0 && <Timeline stages={stageResults} />}
 
       {/* 流式文本（当前阶段加载中） */}
-      {isStreaming && streamContent && (
-        <div className="pl-8 my-4 text-sm text-muted">
-          <Typewriter text={streamContent} isStreaming={true} />
+      {isStreaming && narrativeText && (
+        <div className="pl-8 my-4 text-sm leading-relaxed">
+          <Typewriter text={narrativeText} isStreaming={true} />
         </div>
       )}
 
