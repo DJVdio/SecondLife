@@ -6,9 +6,9 @@
 
 - **框架**: Next.js 15 (App Router)
 - **样式**: Tailwind CSS v4
-- **数据库**: PostgreSQL (Neon) + Drizzle ORM
+- **数据库**: PostgreSQL + Drizzle ORM
 - **会话**: iron-session（加密 cookie，无状态）
-- **部署**: Vercel
+- **部署**: Zeabur
 - **ID 生成**: 雪花漂移算法（用于分享链接）
 
 ## SecondMe API
@@ -153,7 +153,7 @@ src/
 - `SECONDME_BASE_URL` — API 基础 URL
 - `NEXT_PUBLIC_BASE_URL` — 应用公开 URL
 - `SESSION_SECRET` — iron-session 加密密钥（32+ 字符）
-- `DATABASE_URL` — PostgreSQL 连接字符串（Vercel 部署时自动注入）
+- `DATABASE_URL` — PostgreSQL 连接字符串（Zeabur 内置 PG 服务自动注入）
 
 ## 开发命令
 
@@ -170,6 +170,6 @@ npm run db:studio  # 打开 Drizzle Studio
 - 所有 SecondMe API 调用必须经服务端 API Route 代理，不暴露 Token
 - Token 换取必须用 `application/x-www-form-urlencoded` 格式，不是 JSON
 - Refresh Token 有轮换机制：每次刷新后旧 Token 失效
-- SSE 代理路由需设置 `maxDuration: 60`（Vercel 函数超时）
+- Zeabur 部署为容器模式，无 serverless 超时限制
 - 解析 AI JSON 输出需容错处理，准备 fallback 到纯文本展示
 - 所有commit之前都需要践行代码review
