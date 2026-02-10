@@ -3,7 +3,6 @@
 import { useEffect, useRef, useMemo } from "react";
 import { useGame } from "@/hooks/use-game";
 import { StatsBar } from "@/components/ui/stats-bar";
-import { Typewriter } from "@/components/ui/typewriter";
 import { Timeline } from "@/components/game/timeline";
 import { ChoicePanel } from "@/components/game/choice-panel";
 import { useRouter } from "next/navigation";
@@ -44,29 +43,83 @@ export function GameController() {
     }
   };
 
-  // 从原始 JSON 流中提取可读叙事文本
-  const narrativeText = useMemo(() => {
-    if (!streamContent) return "";
-    const parts: string[] = [];
+  // 从流式 JSON 中解析结构化阶段数据，实现逐事件展示
+  const streamingStage = useMemo(() => {
+    if (!streamContent) return null;
 
-    // 提取完整的 "text"/"stage_summary"/"final_summary" 字段值
-    const regex = /"(?:text|stage_summary|final_summary|epitaph)"\s*:\s*"((?:[^"\\]|\\.)*)"/g;
-    let match;
-    let lastEnd = 0;
-    while ((match = regex.exec(streamContent)) !== null) {
-      parts.push(match[1].replace(/\\"/g, '"').replace(/\\n/g, "\n"));
-      lastEnd = regex.lastIndex;
+    const unescape = (s: string) =>
+      s.replace(/\\"/g, '"').replace(/\\n/g, "\n").replace(/\\t/g, "\t");
+
+    // 提取阶段名和年龄范围
+    const stageMatch = streamContent.match(/"stage"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+    const ageRangeMatch = streamContent.match(
+      /"age_range"\s*:\s*"((?:[^"\\]|\\.)*)"/
+    );
+
+    // 逐个提取事件（age + text）
+    const events: Array<{
+      age: number;
+      text: string;
+      isPartial?: boolean;
+    }> = [];
+    const ageRegex = /"age"\s*:\s*(\d+)/g;
+    let ageMatch;
+    while ((ageMatch = ageRegex.exec(streamContent)) !== null) {
+      const after = streamContent.slice(ageMatch.index);
+      // 完整的 text 值
+      const textComplete = after.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+      if (textComplete) {
+        events.push({
+          age: parseInt(ageMatch[1]),
+          text: unescape(textComplete[1]),
+        });
+      } else {
+        // 正在流式输出的部分 text
+        const textPartial = after.match(
+          /"text"\s*:\s*"((?:[^"\\]|\\.)*?)$/
+        );
+        if (textPartial) {
+          events.push({
+            age: parseInt(ageMatch[1]),
+            text: unescape(textPartial[1]),
+            isPartial: true,
+          });
+        }
+      }
     }
 
-    // 捕获正在流式输出中的部分文本（引号还没闭合）
-    const tail = streamContent.slice(lastEnd);
-    const partial = tail.match(/"(?:text|stage_summary|final_summary|epitaph)"\s*:\s*"((?:[^"\\]|\\.)*?)$/);
-    if (partial) {
-      parts.push(partial[1].replace(/\\"/g, '"').replace(/\\n/g, "\n"));
+    // 阶段小结
+    let stageSummary = "";
+    let isSummaryPartial = false;
+    const summaryComplete = streamContent.match(
+      /"stage_summary"\s*:\s*"((?:[^"\\]|\\.)*)"/
+    );
+    if (summaryComplete) {
+      stageSummary = unescape(summaryComplete[1]);
+    } else {
+      const summaryPartial = streamContent.match(
+        /"stage_summary"\s*:\s*"((?:[^"\\]|\\.)*?)$/
+      );
+      if (summaryPartial) {
+        stageSummary = unescape(summaryPartial[1]);
+        isSummaryPartial = true;
+      }
     }
 
-    return parts.join("\n\n");
+    if (!stageMatch && events.length === 0) return null;
+
+    return {
+      stageName: stageMatch ? unescape(stageMatch[1]) : "",
+      ageRange: ageRangeMatch ? unescape(ageRangeMatch[1]) : "",
+      events,
+      stageSummary,
+      isSummaryPartial,
+    };
   }, [streamContent]);
+
+  // 当前/下一阶段标签
+  const STAGE_LABELS = ["出生与童年", "青年", "成年", "中年", "老年与结局"];
+  const nextStageLabel = STAGE_LABELS[stageResults.length] || "下一阶段";
 
   const currentStage = stageResults[stageResults.length - 1];
   const showChoices =
@@ -98,11 +151,36 @@ export function GameController() {
         </div>
       )}
 
-      {/* 加载中 */}
-      {isStreaming && stageResults.length === 0 && !narrativeText && (
-        <div className="flex flex-col items-center py-16 animate-fade-in">
-          <div className="w-8 h-8 border-2 border-foreground border-t-transparent rounded-full animate-spin mb-4" />
-          <p className="text-sm text-muted">正在翻阅你的记忆，编织新的人生...</p>
+      {/* 骨架屏时间线（等待 AI 生成时显示） */}
+      {isStreaming && !streamingStage && (
+        <div className="relative pl-8 my-4 animate-fade-in">
+          <div className="absolute left-3 top-0 bottom-0 w-px timeline-line opacity-30" />
+
+          {/* 阶段标题 */}
+          <div className="flex items-center gap-3 mb-4 -ml-8">
+            <div className="w-6 h-6 rounded-full border-2 border-muted bg-background flex items-center justify-center z-10">
+              <span className="text-[10px] font-mono text-muted">
+                {stageResults.length + 1}
+              </span>
+            </div>
+            <h3 className="text-sm font-mono tracking-wider text-muted">
+              {nextStageLabel}
+              <span className="loading-dots" />
+            </h3>
+          </div>
+
+          {/* 事件骨架条 */}
+          <div className="space-y-4 ml-1">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="relative flex gap-3 animate-pulse" style={{ animationDelay: `${i * 0.3}s` }}>
+                <div className="absolute -left-[25px] top-1.5 w-2 h-2 rounded-full bg-muted/40" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-3 w-10 bg-muted/20 rounded" />
+                  <div className="h-3 bg-muted/15 rounded" style={{ width: `${55 + i * 15}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -116,10 +194,59 @@ export function GameController() {
       {/* 时间线 */}
       {stageResults.length > 0 && <Timeline stages={stageResults} />}
 
-      {/* 流式文本（当前阶段加载中） */}
-      {isStreaming && narrativeText && (
-        <div className="pl-8 my-4 text-sm leading-relaxed">
-          <Typewriter text={narrativeText} isStreaming={true} />
+      {/* 流式时间线（当前阶段逐事件展示） */}
+      {isStreaming && streamingStage && (
+        <div className="relative pl-8 my-4">
+          <div className="absolute left-3 top-0 bottom-0 w-px timeline-line" />
+
+          {/* 阶段标题 */}
+          {(streamingStage.stageName || streamingStage.ageRange) && (
+            <div className="flex items-center gap-3 mb-4 -ml-8">
+              <div className="w-6 h-6 rounded-full border-2 border-foreground bg-background flex items-center justify-center z-10">
+                <span className="text-[10px] font-mono">
+                  {stageResults.length + 1}
+                </span>
+              </div>
+              <h3 className="text-sm font-mono tracking-wider uppercase">
+                {streamingStage.stageName}
+                {streamingStage.ageRange &&
+                  ` · ${streamingStage.ageRange}`}
+              </h3>
+            </div>
+          )}
+
+          {/* 事件列表 */}
+          <div className="space-y-3 ml-1">
+            {streamingStage.events.map((event, idx) => (
+              <div
+                key={idx}
+                className="relative flex gap-3 animate-fade-in"
+              >
+                <div className="absolute -left-[25px] top-1.5 w-2 h-2 rounded-full bg-foreground" />
+                <div>
+                  <span className="font-mono text-xs text-muted mr-2">
+                    {event.age}岁
+                  </span>
+                  <span className="text-sm leading-relaxed">
+                    {event.text}
+                    {event.isPartial && (
+                      <span className="cursor-blink" />
+                    )}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 阶段小结 */}
+          {streamingStage.stageSummary && (
+            <p className="mt-3 text-xs text-muted italic border-l-2 border-border pl-3">
+              {streamingStage.stageSummary}
+              {streamingStage.isSummaryPartial && (
+                <span className="cursor-blink" />
+              )}
+            </p>
+          )}
         </div>
       )}
 
