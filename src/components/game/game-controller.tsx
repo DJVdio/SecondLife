@@ -75,7 +75,7 @@ export function GameController() {
       )}
 
       {/* 加载中 */}
-      {isStreaming && stageResults.length === 0 && (
+      {isStreaming && stageResults.length === 0 && !streamContent && (
         <div className="flex flex-col items-center py-16 animate-fade-in">
           <div className="w-8 h-8 border-2 border-foreground border-t-transparent rounded-full animate-spin mb-4" />
           <p className="text-sm text-muted">正在翻阅你的记忆，编织新的人生...</p>
@@ -93,7 +93,7 @@ export function GameController() {
       {stageResults.length > 0 && <Timeline stages={stageResults} />}
 
       {/* 流式文本（当前阶段加载中） */}
-      {isStreaming && streamContent && stageResults.length > 0 && (
+      {isStreaming && streamContent && (
         <div className="pl-8 my-4 text-sm text-muted">
           <Typewriter text={streamContent} isStreaming={true} />
         </div>
