@@ -122,8 +122,17 @@ export function GameController() {
   const nextStageLabel = STAGE_LABELS[stageResults.length] || "下一阶段";
 
   const currentStage = stageResults[stageResults.length - 1];
+
+  // 流式时间线显示条件：正在流式 OR 解析失败后保留展示（stage 名未被加入 stageResults）
+  const showStreamingTimeline = !!streamingStage && (
+    isStreaming ||
+    stageResults.length === 0 ||
+    stageResults[stageResults.length - 1]?.stage !== streamingStage.stageName
+  );
+
+  // 解析失败时（showStreamingTimeline 为 fallback 模式），隐藏旧阶段的选项
   const showChoices =
-    !isStreaming && currentStage?.choices?.length > 0 && !isComplete;
+    !isStreaming && !showStreamingTimeline && currentStage?.choices?.length > 0 && !isComplete;
 
   return (
     <div className="min-h-screen max-w-2xl mx-auto px-6 py-8">
@@ -194,8 +203,8 @@ export function GameController() {
       {/* 时间线 */}
       {stageResults.length > 0 && <Timeline stages={stageResults} />}
 
-      {/* 流式时间线（当前阶段逐事件展示） */}
-      {isStreaming && streamingStage && (
+      {/* 流式时间线（当前阶段逐事件展示 + 解析失败 fallback） */}
+      {showStreamingTimeline && (
         <div className="relative pl-8 my-4">
           <div className="absolute left-3 top-0 bottom-0 w-px timeline-line" />
 

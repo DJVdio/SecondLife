@@ -133,6 +133,8 @@ export function useGame() {
           stageResults: [stageResult],
           attributes: stageResult.updated_attributes || prev.attributes,
         }));
+      } else if (content) {
+        setError("内容解析失败，请刷新页面重试");
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unknown error");
@@ -180,6 +182,8 @@ export function useGame() {
             attributes: stageResult.updated_attributes || prev.attributes,
             isComplete: isLast,
           }));
+        } else if (content) {
+          setError("内容解析失败，请刷新页面重试");
         }
       } catch (e) {
         setError(e instanceof Error ? e.message : "Unknown error");
@@ -187,7 +191,7 @@ export function useGame() {
         setIsStreaming(false);
       }
     },
-    [data.sessionId, data.currentStageIndex, parseSSEStream]
+    [data.sessionId, data.currentStageIndex, data.attributes, parseSSEStream]
   );
 
   const saveResult = useCallback(async () => {
@@ -237,31 +241,36 @@ export function useGame() {
 }
 
 function parseStageJSON(content: string): StageResult | null {
+  if (!content?.trim()) return null;
+
+  // 1. 直接解析
   try {
-    // 尝试直接解析
     return JSON.parse(content);
-  } catch {
-    // 尝试从 markdown code block 中提取
-    const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
-    if (jsonMatch) {
-      try {
-        return JSON.parse(jsonMatch[1]);
-      } catch {
-        // fall through
-      }
-    }
+  } catch { /* continue */ }
 
-    // 尝试找到第一个 { 和最后一个 }
-    const start = content.indexOf("{");
-    const end = content.lastIndexOf("}");
-    if (start !== -1 && end > start) {
-      try {
-        return JSON.parse(content.slice(start, end + 1));
-      } catch {
-        // fall through
-      }
-    }
-
-    return null;
+  // 2. 从 markdown code block 提取（兼容有无 "json" 标签）
+  const fenceMatch = content.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
+  if (fenceMatch) {
+    try {
+      return JSON.parse(fenceMatch[1].trim());
+    } catch { /* continue */ }
   }
+
+  // 3. 提取最外层 { ... }
+  const start = content.indexOf("{");
+  const end = content.lastIndexOf("}");
+  if (start !== -1 && end > start) {
+    const jsonStr = content.slice(start, end + 1);
+    try {
+      return JSON.parse(jsonStr);
+    } catch { /* continue */ }
+
+    // 4. 修复尾部逗号后重试
+    try {
+      return JSON.parse(jsonStr.replace(/,(\s*[}\]])/g, "$1"));
+    } catch { /* continue */ }
+  }
+
+  console.warn("parseStageJSON: all attempts failed. Preview:", content.slice(0, 300));
+  return null;
 }
