@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { ensureFreshToken } from "@/lib/auth/ensure-token";
 import { buildChatStreamRequest } from "@/lib/secondme/client";
 
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   try {
     const token = await ensureFreshToken();

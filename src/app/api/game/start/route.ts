@@ -5,6 +5,8 @@ import { buildChatStreamRequest } from "@/lib/secondme/client";
 import { buildSystemPrompt, stageMessages } from "@/lib/game/prompts";
 import { generateRandomAttributes } from "@/lib/game/engine";
 
+export const maxDuration = 60;
+
 export async function POST() {
   try {
     const token = await ensureFreshToken();

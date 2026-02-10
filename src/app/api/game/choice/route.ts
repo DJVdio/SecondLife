@@ -4,6 +4,8 @@ import { buildChatStreamRequest } from "@/lib/secondme/client";
 import { stageMessages } from "@/lib/game/prompts";
 import type { LifeStage, Attributes } from "@/lib/game/types";
 
+export const maxDuration = 60;
+
 const stageMessageMap: Record<string, (choice: string, attrs: Attributes) => string> = {
   youth: stageMessages.youth,
   adulthood: stageMessages.adulthood,
