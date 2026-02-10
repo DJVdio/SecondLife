@@ -1,10 +1,4 @@
-"use client";
-
-import { useAuth } from "@/hooks/use-auth";
-
 export default function Home() {
-  const { user, loading, login } = useAuth();
-
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6">
       {/* 标题区 */}
@@ -36,25 +30,12 @@ export default function Home() {
 
       {/* CTA */}
       <div className="max-w-md w-full">
-        {loading ? (
-          <div className="flex justify-center py-4">
-            <div className="w-5 h-5 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : user ? (
-          <a
-            href="/game"
-            className="block w-full py-3 border-2 border-foreground text-center font-mono text-sm tracking-wider hover:bg-foreground hover:text-background transition-colors"
-          >
-            开始你的第二人生
-          </a>
-        ) : (
-          <button
-            onClick={login}
-            className="w-full py-3 border-2 border-foreground font-mono text-sm tracking-wider hover:bg-foreground hover:text-background transition-colors"
-          >
-            连接 SecondMe 开始
-          </button>
-        )}
+        <a
+          href="/api/auth/login"
+          className="block w-full py-3 border-2 border-foreground text-center font-mono text-sm tracking-wider hover:bg-foreground hover:text-background transition-colors"
+        >
+          连接 SecondMe 开始
+        </a>
       </div>
 
       {/* 底部 */}
