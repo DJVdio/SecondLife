@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { lifeResults } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
@@ -10,7 +10,7 @@ export async function GET(
   const { id } = await params;
 
   try {
-    const results = await db
+    const results = await getDb()
       .select()
       .from(lifeResults)
       .where(eq(lifeResults.shareId, id))

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { lifeResults } from "@/lib/db/schema";
 import { generateSnowflakeId } from "@/lib/snowflake";
 
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const shareId = generateSnowflakeId();
 
-    await db.insert(lifeResults).values({
+    await getDb().insert(lifeResults).values({
       shareId,
       userId: session.userId,
       userName: session.userName || "Unknown",
