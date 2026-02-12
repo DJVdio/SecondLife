@@ -32,7 +32,7 @@ export interface StageResult {
   events: LifeEvent[];
   choices: StageChoice[];
   stage_summary: string;
-  updated_attributes: Attributes;
+  updated_attributes?: Attributes;
   // 最终阶段特有字段
   death_age?: number;
   death_cause?: string;

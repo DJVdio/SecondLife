@@ -4,7 +4,7 @@
 
 ## 技术栈
 
-- **框架**: Next.js 15 (App Router)
+- **框架**: Next.js 16 (App Router)
 - **样式**: Tailwind CSS v4
 - **数据库**: PostgreSQL + Drizzle ORM
 - **会话**: iron-session（加密 cookie，无状态）

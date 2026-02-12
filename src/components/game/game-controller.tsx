@@ -160,6 +160,16 @@ export function GameController() {
         </div>
       )}
 
+      {/* 错误 */}
+      {error && (
+        <div className="p-4 border border-red-300 bg-red-50 text-red-800 text-sm mb-6">
+          {error}
+        </div>
+      )}
+
+      {/* 时间线 */}
+      {stageResults.length > 0 && <Timeline stages={stageResults} />}
+
       {/* 骨架屏时间线（等待 AI 生成时显示） */}
       {isStreaming && !streamingStage && (
         <div className="relative pl-8 my-4 animate-fade-in">
@@ -192,16 +202,6 @@ export function GameController() {
           </div>
         </div>
       )}
-
-      {/* 错误 */}
-      {error && (
-        <div className="p-4 border border-red-300 bg-red-50 text-red-800 text-sm mb-6">
-          {error}
-        </div>
-      )}
-
-      {/* 时间线 */}
-      {stageResults.length > 0 && <Timeline stages={stageResults} />}
 
       {/* 流式时间线（当前阶段逐事件展示 + 解析失败 fallback） */}
       {showStreamingTimeline && (

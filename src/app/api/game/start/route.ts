@@ -3,7 +3,7 @@ import { ensureFreshToken } from "@/lib/auth/ensure-token";
 import { composeUserProfile } from "@/lib/secondme/memory-composer";
 import { buildChatStreamRequest } from "@/lib/secondme/client";
 import { buildSystemPrompt, stageMessages } from "@/lib/game/prompts";
-import { generateRandomAttributes } from "@/lib/game/engine";
+import { generateRandomAttributes, generateRandomSeeds } from "@/lib/game/engine";
 
 export const maxDuration = 60;
 
@@ -12,7 +12,8 @@ export async function POST() {
     const token = await ensureFreshToken();
     const profile = await composeUserProfile(token);
     const attributes = generateRandomAttributes();
-    const systemPrompt = buildSystemPrompt(profile, attributes);
+    const seeds = generateRandomSeeds();
+    const systemPrompt = buildSystemPrompt(profile, attributes, seeds);
 
     const { url, init } = buildChatStreamRequest(
       token,
